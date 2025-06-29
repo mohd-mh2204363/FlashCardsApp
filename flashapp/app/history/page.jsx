@@ -1,93 +1,80 @@
 'use client'
-import React from 'react'
-import { useState } from 'react'
-export default function History() {
-    const flashcardHistory = {
-        "flashcards": [
-            {
-                "id": 1,
-                "question": "What is the capital of France?",
-                "answer": "Paris"
-            },
-            {
-                "id": 2,
-                "question": "What is the largest planet in our solar system?",
-                "answer": "Jupiter"
-            },
-            {
-                "id": 3,
-                "question": "What is the chemical symbol for gold?",
-                "answer": "Au"
-            }
-        ]
-    }
-
-    const [show, setShow] = useState(false);
-    const [currentCardIndex, setCurrentCardIndex] = useState(0);
-    const currentCard = flashcardHistory.flashcards[currentCardIndex];
-
-    const switchCard = (newIndex) => {
-        setShow(false);
-        setCurrentCardIndex(newIndex);
-    };
+import React, { useState } from 'react'
+import {
+    Card,
+    CardFooter,
+    CardHeader,
+    CardTitle,
+} from "@/components/ui/card"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Button } from "@/components/ui/button"
+import Image from "next/image"
+import { useRouter } from 'next/navigation'
+export default function page() {
+    const data = [
+        { id: 1, name: 'Instance #1', description: 'This is a description for Instance #1' },
+        { id: 2, name: 'Instance #2', description: 'This is a description for Instance #2' },
+        { id: 3, name: 'Instance #3', description: 'This is a description for Instance #3' },
+    ]
+    const [activeTab, setActiveTab] = useState('tiles');
+    const router = useRouter();
 
     return (
         <>
-            <div className='flex flex-col items-center'>
-                <h1 className="text-2xl font-bold text-white mb-4">Flashcard History</h1>
-
-                <div className="flex items-center justify-center mt-10 space-x-4">
-                    <button
-                        disabled={currentCardIndex === 0}
-                        onClick={() => switchCard(currentCardIndex - 1)}
-                        className="text-white text-xl px-4 py-2 bg-gray-700 rounded hover:cursor-pointer disabled:opacity-30"
-                    >
-                        &lt;
-                    </button>
-                    <div
-                        onClick={() => setShow(!show)}
-                        style={{ perspective: '1000px' }}
-                        className="w-[937px] h-[572px] cursor-pointer"
-                    >
-                        <div
-                            style={{
-                                transition: 'transform 0.7s',
-                                transformStyle: 'preserve-3d',
-                                transform: show ? 'rotateY(180deg)' : 'rotateY(0deg)'
-                            }}
-                            className="relative w-full h-full"
+            <div className='flex flex-col items-center w-full min-h-screen'>
+                <div className='flex w-4/5 justify-start mt-2.5'>
+                    <h1 className='text-4xl font-bold text-gray-200 my-8.5'>Your History</h1>
+                </div>
+                <div className="gap-4 w-4/5 mt-2.5">
+                    <div className=" rounded shadow" />
+                    <div className="rounded flex justify-between px-5.5 ">
+                        <Button
+                            className="bg-gray-950 text-gray-200 border-1 border-gray-700 hover:bg-gray-700"
+                            onClick={() => router.push('/')}
                         >
-                            <div
-                                className="absolute w-full h-full bg-gradient-to-bl from-gray-950 to-gray-900 p-6 shadow-lg rounded-4xl flex items-center justify-center"
-                                style={{ backfaceVisibility: 'hidden' }}
-                            >
-                                <div className="flex items-center justify-center text-5xl text-center font-bold text-gray-200">
-                                    Question: {currentCard.question}
-                                </div>
-                            </div>
-                            <div
-                                className="absolute w-full h-full bg-gradient-to-bl from-gray-950 to-gray-900 p-6 shadow-lg rounded-4xl flex items-center justify-center"
-                                style={{
-                                    transform: 'rotateY(180deg)',
-                                    backfaceVisibility: 'hidden'
-                                }}
-                            >
-                                <div className="flex items-center justify-center text-6xl text-center font-bold text-gray-200">
-                                    Answer: {currentCard.answer}
-                                </div>
-                            </div>
+                            Create New +
+                        </Button>
+                        <div className="flex gap-6">
+                            <Tabs defaultValue="tiles">
+                                <TabsList className="">
+                                    <TabsTrigger value="tiles" onClick={() => setActiveTab('tiles')} className="text-gray-500 border-1 border-gray-300 data-[state=active]:bg-gray-300 data-[state=active]:text-gray-800 ">Tiles</TabsTrigger>
+                                    <TabsTrigger value="cards" onClick={() => setActiveTab('cards')} className="text-gray-500 border-1 ml-1.5 border-gray-300 data-[state=active]:bg-gray-300 data-[state=active]:text-gray-800 ">Cards</TabsTrigger>
+                                </TabsList>
+                            </Tabs>
                         </div>
                     </div>
-                    <button
-                        disabled={currentCardIndex === flashcardHistory.flashcards.length - 1}
-                        onClick={() => switchCard(currentCardIndex + 1)}
-                        className="text-white text-xl px-4 py-2 bg-gray-700 hover:cursor-pointer rounded disabled:opacity-50"
-                    >
-                        &gt;
-                    </button>
+
+                    {activeTab === 'cards' && (
+                        <div className="rounded grid grid-cols-3 gap-5 mt-4">
+                            {data.map((item) => (
+                                <Card className="bg-gray-950 border-2 border-gray-800 shadow hover:scale-102 transition-transform duration-100" key={item.id}>
+                                    <CardHeader>
+                                        <CardTitle className="text-2xl text-gray-200 font-bold">{item.name}</CardTitle>
+                                    </CardHeader>
+                                    <CardFooter>
+                                        <p className="text-gray-400">{item.description}</p>
+                                    </CardFooter>
+                                </Card>
+                            ))}
+                        </div>
+                    )}
+                    {activeTab === 'tiles' && (
+                        <div className="rounded grid grid-cols-1 gap-5 mt-4">
+                            {data.map((item) => (
+                                <Card className="bg-gray-950 border-2 border-gray-800 shadow hover:scale-102 transition-transform duration-100" key={item.id}>
+                                    <CardHeader>
+                                        <CardTitle className="text-2xl text-gray-200 font-bold">{item.name}</CardTitle>
+                                    </CardHeader>
+                                    <CardFooter>
+                                        <p className="text-gray-400">{item.description}</p>
+                                    </CardFooter>
+                                </Card>
+                            ))}
+                        </div>
+                    )}
+
                 </div>
-                <p className='text-gray-400 pt-3.5'>{currentCardIndex + 1} / {flashcardHistory.flashcards.length}</p>
             </div>
         </>
-    );
+    )
 }
