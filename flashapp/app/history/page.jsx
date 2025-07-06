@@ -1,5 +1,5 @@
 'use client'
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
     Card,
     CardFooter,
@@ -10,15 +10,24 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import Image from "next/image"
 import { useRouter } from 'next/navigation'
+import { useApi } from "../components/Api"
 export default function page() {
-    const data = [
+    const { makeRequest } = useApi()
+    const [data, setData] = useState([
         { id: 1, name: 'Instance #1', description: 'This is a description for Instance #1' },
         { id: 2, name: 'Instance #2', description: 'This is a description for Instance #2' },
         { id: 3, name: 'Instance #3', description: 'This is a description for Instance #3' },
-    ]
+    ])
+
     const [activeTab, setActiveTab] = useState('tiles');
     const router = useRouter();
-
+    useEffect(() => {
+        fetchHistory()
+    }, [])
+    const fetchHistory = async () => {
+        const data = await makeRequest("decks/me")
+        setData(data)
+    }
     return (
         <>
             <div className='flex flex-col items-center w-full min-h-screen'>

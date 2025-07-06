@@ -1,8 +1,10 @@
 'use client';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-
+import { Routes, Route } from 'react-router-dom';
 import { Textarea } from "@/components/ui/textarea"
+import { useApi } from './components/Api';
+import { useRouter } from 'next/navigation';
 export default function FlashcardGenerator() {
   const [activeTab, setActiveTab] = useState('text');
   const [count, setCount] = useState(10);
@@ -10,37 +12,34 @@ export default function FlashcardGenerator() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const charLimit = 5000;
-  const API_URL = "https://example.com/api/upload";
+  const API_URL = "http://127.0.0.1:8000";
   const [file, setFile] = useState([]);
   const [link, setLink] = useState('');
   const [frontText, setFrontText] = useState('');
   const [backText, setBackText] = useState('');
 
   const [status, setStatus] = useState('idle');
-
+  const router = useRouter();
+  const { makeRequest } = useApi();
   const generateFlashcards = async () => {
     setIsLoading(true);
     setStatus('generating');
     const links = link.split('\n').filter(l => l.trim() !== '');
     const formData = new FormData();
-    formData.append('frontTextLength', frontText);
-    formData.append('backTextLength', backText);
+    formData.append('front_text_length', frontText);
+    formData.append('back_text_length', backText);
     formData.append('prompt', prompt);
-    formData.append('count', count);
-    links.forEach((l, i) => {
-      formData.append(`link[${i}]`, l);
-    });
-    console.log('Form Data:', formData.getAll('link[]'));
+    formData.append('count', String(count));
+    file.forEach((f) => formData.append('files', f))
+    links.forEach((l) => formData.append('links', l))
+    console.log('Form Data:', formData.values());
     try {
-      await axios.post(API_URL, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        },
-        onUploadProgress: (progressEvent) => {
-          const percentCompleted = progressEvent.total ? Math.round((progressEvent.loaded * 100) / progressEvent.total) : 0;
-          setUploadProgress(percentCompleted);
-        }
+      const deck = await makeRequest("generate", {
+        method: "POST",
+        body: formData,
       });
+      router.push(`/decks/${deck.id}`);
+
     } catch (error) {
       console.error('Error generating flashcards:', error);
       setError('Failed to generate flashcards. Please try again.');
