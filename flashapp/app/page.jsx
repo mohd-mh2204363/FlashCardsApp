@@ -197,7 +197,9 @@ export default function FlashcardGenerator() {
         </div>
       )}
 
-      <button
+      {isLoading?(<div className="flex justify-center items-center mt-20">
+                            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-gray-200"></div>
+                      </div>):(<button
         onClick={() => {
           if (!isGenerateDisabled) generateFlashcards();
         }}
@@ -207,7 +209,7 @@ export default function FlashcardGenerator() {
         `}
       >
         Generate Flashcards
-      </button>
+      </button> )}
       {activeTab === 'text' && (
 
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

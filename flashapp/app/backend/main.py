@@ -1,3 +1,5 @@
+from io import BytesIO  # Add this at the top
+
 from fastapi import FastAPI, File, Form, UploadFile, Depends, HTTPException, Request, Response
 from clerk_backend_api import Clerk, AuthenticateRequestOptions
 from fastapi.middleware.cors import CORSMiddleware
@@ -18,7 +20,6 @@ from functools import lru_cache
 from typing import Dict
 
 import requests
-from jose import jwt
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from dotenv import load_dotenv
@@ -66,20 +67,39 @@ def get_db():
         db.close()
 
 clerk_sdk  = Clerk(
-    bearer_auth = os.getenv("CLERK_SECRET_AUTH")
+    bearer_auth = 'sk_test_bnTZD6SBdeydALsf1MSNFda6zYEiLkvbRndMpFMkiy'
 )
 
 def authenticate_user(request: Request):
     try:
-        request_state = clerk_sdk.authenticate_request(request,AuthenticateRequestOptions(
-                                                           authorized_parties=["http://localhost:3000"],
-                                                           jwt_key=os.getenv("JWT_KEY"),
-                                                       ))
-        if not request_state.is_signed_in:
-            raise HTTPException(status_code=401, detail="Unauthorized")
-        return request_state.payload
+        request_state = clerk_sdk.authenticate_request(
+            request,
+            AuthenticateRequestOptions(
+                authorized_parties=["http://localhost:3000"],  # must match the azp in the token
+                jwt_key='''"-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyIzBNAKeoIANdo1PSWVm
+c10WnOxd03AKi1fREr2yjUOeJkQGvDH1Dvmkkb29/nB2JsIfw18XqwQYpcgng4t9
+/14/XnaFn3GQ/EHRcp7pz6m70AovnXdGkpeiiAC3bBDhi2egi4j3VV041brFe04m
+wNx2gtv8yYHz2yZKVCwD3Vp8cAMLAsjB/NuPQ/B6ClspRDiN/YWlIDtxo3ivgkG9
+cg0T9QjXhnDSNAuBmRebyZJQ9iPcmF+qlgoitSBh7WEO/IH7vExwAs/I75pqatP0
+M9Oc0bPDkfVH60FIDR4TWJbkLIUmaJGeVOGKtroDz/7/oZ/chk2Z3bPH/lWRWtq5
+YwIDAQAB
+-----END PUBLIC KEY-----"''',                 # optional in dev
+            ),
+            
+        )
     except Exception as e:
-        raise HTTPException(status_code=500, detail="Custom Error")
+        # Log so you can read the real error in the console
+        logging.exception("Clerk auth failed")
+        raise HTTPException(status_code=401, detail=str(e))
+    print("=========================================================")
+    print(os.getenv("JWT_KEY"))
+    print(os.getenv("CLERK_SECRET_AUTH"))
+    if not request_state.is_signed_in:
+        # Clerk already tells you why (expired token, bad signature, wrong azp, etc.)
+        raise HTTPException(status_code=401, detail=request_state.reason)  # :contentReference[oaicite:0]{index=0}
+
+    return request_state.payload
     
 def get_current_user(
     payload = Depends(authenticate_user),
@@ -184,7 +204,7 @@ def update_deck(deck_id: int, deck: DeckSchema, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(db_deck)
     return db_deck
-
+print('testing')
 @app.post("/generate", response_model=DeckSchema, status_code=201)
 async def generate_flashcards(
     prompt: str              = Form(...),
@@ -196,19 +216,30 @@ async def generate_flashcards(
     db: Session              = Depends(get_db),
     user: User               = Depends(get_current_user),
 ):
+    print(prompt)
     textfromPDF = ""
     for up in files:
         if not up.filename.lower().endswith(".pdf"):
             raise HTTPException(400, "Only PDF files are allowed.")
-        textfromPDF += extract_text(up.file)
+        try:
+            pdf_bytes = up.file.read()
+            textfromPDF += extract_text(BytesIO(pdf_bytes))
+        except Exception as e:
+            print(f"❌ Failed to extract PDF: {e}")
+            raise HTTPException(400, "Failed to read PDF")
 
-    name, description, cards_json = get_cards(
-        user_input        = prompt,
-        front_text_length = front_text_length,
-        back_text_length  = back_text_length,
-        count             = count,
-        textfromPDF       = textfromPDF,
+
+    try:
+        name, description, cards_json = get_cards(
+        user_input=prompt,
+        front_text_length=front_text_length,
+        back_text_length=back_text_length,
+        count=int(count),  # ensure it's int
+        textfromPDF=textfromPDF,
     )
+    except Exception as e:  
+        print(f"🔥 get_cards() error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to generate cards")
 
     deck = Deck(name=name, description=description, user_id=user.id)
     db.add(deck)

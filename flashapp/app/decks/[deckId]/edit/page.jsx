@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import React from 'react'
 import { Button } from "@/components/ui/button"
 import { useParams, useRouter } from "next/navigation";
-import { useApi } from "C:\\Users\\kingh\\Documents\\GitHub\\FlashCardsApp\\flashapp\\app\\components\\Api.js";
+import { useApi } from "/Users/ridhwan/GitHub/FlashCardsApp/flashapp/app/components/Api.js";
 
 
 export default function page() {

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
-import { useApi } from 'C:/Users/kingh/Documents/GitHub/FlashCardsApp/flashapp/app/components/Api.js';               // adjust path if needed
+import { useApi } from '/Users/ridhwan/GitHub/FlashCardsApp/flashapp/app/components/Api.js';               // adjust path if needed
 
 import {
     Card,

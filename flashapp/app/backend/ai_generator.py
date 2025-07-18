@@ -9,7 +9,7 @@ import json
 fanar_llm = ChatOpenAI(
     model="Fanar",
     openai_api_base="https://api.fanar.qa/v1",
-    openai_api_key="-",
+    openai_api_key="9V6w2YnCYm9fygQBsNXtuS7ZMfzT7LII",
     temperature=0.7,
 )
 
