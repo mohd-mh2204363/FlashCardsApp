@@ -1,47 +1,98 @@
 'use client';
-import { useState, useEffect, use } from "react";
+import { useState, useEffect } from "react";
 import React from 'react'
 import { Button } from "@/components/ui/button"
+import { useParams, useRouter } from "next/navigation";
+import { useApi } from "C:\\Users\\kingh\\Documents\\GitHub\\FlashCardsApp\\flashapp\\app\\components\\Api.js";
 
 
 export default function page() {
-    const [name, setName] = useState('Sockets Network Programming');
-    const [variable, setVariable] = useState(null);
+    const { deckId } = useParams();
+    const router = useRouter();
+    const { makeRequest } = useApi();
+    const [name, setName] = useState('');
+    const [description, setDescription] = useState('');
+    const [cards, setCards] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState(null);
+    const [loadError, setLoadError] = useState(null);
 
-    const flashcards = [
-        {
-            id: 1,
-            name: 'Socket Basics',
-            questions: [
-                { question: 'What is a socket?', answer: 'A socket is an endpoint for sending or receiving data across a computer network.' },
-                { question: 'What are the types of sockets?', answer: 'Stream sockets and datagram sockets.' },
-                { question: 'What is a socket?', answer: 'A socket is an endpoint for sending or receiving data across a computer network.' },
-                { question: 'What are the types of sockets?', answer: 'Stream sockets and datagram sockets.' },
-                { question: 'What is a socket?', answer: 'A socket is an endpoint for sending or receiving data across a computer network.' },
-                { question: 'What are the types of sockets?', answer: 'Stream sockets and datagram sockets.' },
-            ]
-        },
-        {
-            id: 2,
-            name: 'Network Programming',
-            questions: [
-                { question: 'What is network programming?', answer: 'Network programming is the practice of writing programs that communicate with other programs across a network.' },
-                { question: 'Which languages are commonly used for network programming?', answer: 'Languages like Python, Java, and C are commonly used.' }
-            ]
-        },
+    const loadDeckData = async () => {
+        try {
+            setLoading(true);
+            const deck = await makeRequest(`decks/${deckId}`);
+            setName(deck.name);
+            setDescription(deck.description || '');
+            setCards(deck.cards || []);
+        } catch (error) {
+            setLoadError('Failed to load deck data: ' + error.message);
+        } finally {
+            setLoading(false);
+        }
+    }
+    useEffect(() => {
+        loadDeckData()
+    }, [deckId])
 
-    ];
-    const currentUrl = typeof window !== "undefined" ? window.location.href : "";
-    const id = currentUrl.split('/')[currentUrl.split('/').length - 2];
-    const object = flashcards.find((item) => item.id === parseInt(id));
-    function loadData() {
-        setName(object.name);
-        setVariable(object.questions);
+    const handleCardChange = (index, field, value) => {
+        const updatedCards = [...cards];
+        updatedCards[index] = { ...updatedCards[index], [field]: value };
+        setCards(updatedCards);
+    }
+    const addNewCard = () => {
+        const newCards = [...cards, { question: '', answer: '' }];
+        setCards(newCards);
+    }
+    const removeCard = (index) => {
+        const updatedCards = cards.filter((_, i) => i !== index);
+        setCards(updatedCards);
     }
 
-    useEffect(() => { loadData() }, [])
+    const saveDeck = async () => {
+        try {
+            setSaving(true);
+            const deckData = {
+                id: parseInt(deckId),
+                name,
+                description,
+                cards
+            };
 
-    return (
+
+            const response = await fetch(`http://127.0.0.1:8000/decks/${deckId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(deckData),
+            });
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            router.push(`/decks/${deckId}`);
+        } catch (error) {
+            setError('Failed to save deck: ' + error.message);
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    if (loading) {
+        return (
+            <div className='flex items-center justify-center h-screen'>            <div className='text-xl'>Loading deck...</div>
+            </div>
+        );
+    }
+
+    if (loadError) {
+        return (
+            <div className='flex items-center justify-center h-screen'>
+                <div className='text-xl text-red-500'>{loadError}</div>
+            </div>
+        );
+    } return (
         <>
             <div className='flex gap-4 p-4 w-full'>
                 <div className='w-[800px] p-7 bg-gray-900 h-full rounded-lg'>
@@ -49,10 +100,23 @@ export default function page() {
                         <h1 className='text-4xl font-bold gri mb-3'>Edit Decks</h1>
                         <Button
                             className="bg-gray-850 rounded-lg text-gray-200 border-1 border-gray-700 hover:bg-gray-700"
+                            onClick={saveDeck}
+                            disabled={saving}
                         >
-                            Save Changes
+                            {saving ? 'Saving...' : 'Save Changes'}
                         </Button>
                     </div>
+                    {error && (
+                        <div className="max-w-3xl mx-auto mt-4 p-4 bg-red-900 border border-red-700 rounded-lg">
+                            <p className="text-red-200">{error}</p>
+                            <Button
+                                className="mt-2 bg-red-700 hover:bg-red-600 text-white text-sm px-3 py-1"
+                                onClick={() => setError(null)}
+                            >
+                                Dismiss
+                            </Button>
+                        </div>
+                    )}
                     <div className="max-w-3xl mx-auto rounded-xl bg-gray-800 p-4 shadow-sm">
                         <div className="grid grid-cols-3 gap-4 items-center">
                             <span className="font-semibold">Name</span>
@@ -62,25 +126,55 @@ export default function page() {
                                 onChange={(e) => setName(e.target.value)}
                             />
                         </div>
+                        <div className="grid grid-cols-3 gap-4 items-center mt-4">
+                            <span className="font-semibold">Description</span>
+                            <textarea
+                                className="col-span-2 w-full rounded-lg bg-gray-700 px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500 resize-vertical"
+                                value={description}
+                                onChange={(e) => setDescription(e.target.value)}
+                                rows={3}
+                            />
+                        </div>
                     </div>
-                    {object.questions.map((item, index) => (
+                    {cards.map((card, index) => (
                         <div key={index} className="max-w-3xl mx-auto mt-4 rounded-xl bg-gray-800 p-4 shadow-sm">
+                            <div className="flex justify-between items-center mb-3">
+                                <h3 className="font-semibold">Card {index + 1}</h3>
+                                <Button
+                                    className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 text-sm"
+                                    onClick={() => removeCard(index)}
+                                >
+                                    Remove
+                                </Button>
+                            </div>
                             <div className="grid grid-cols-3 gap-4 items-center">
                                 <span className="font-semibold">Question</span>
-                                <input
-                                    className="col-span-2 w-full rounded-lg bg-gray-700 px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500"
-                                    value={item.question}
+                                <textarea
+                                    className="col-span-2 w-full rounded-lg bg-gray-700 px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500 resize-vertical"
+                                    value={card.question}
+                                    onChange={(e) => handleCardChange(index, 'question', e.target.value)}
+                                    rows={2}
                                 />
                             </div>
                             <div className="grid grid-cols-3 gap-4 items-center mt-2">
                                 <span className="font-semibold">Answer</span>
-                                <input
-                                    className="col-span-2 w-full rounded-lg bg-gray-700 px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500"
-                                    value={item.answer}
+                                <textarea
+                                    className="col-span-2 w-full rounded-lg bg-gray-700 px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500 resize-vertical"
+                                    value={card.answer}
+                                    onChange={(e) => handleCardChange(index, 'answer', e.target.value)}
+                                    rows={2}
                                 />
                             </div>
                         </div>
                     ))}
+                    <div className="max-w-3xl mx-auto mt-4">
+                        <Button
+                            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white"
+                            onClick={addNewCard}
+                        >
+                            Add New Card
+                        </Button>
+                    </div>
                 </div>
                 <div className='bg-gray-900 w-[450px] h-full rounded-lg flex flex-col'>
                     <h1 className='text-4xl font-bold grid p-4 pb-2'>Chat</h1>

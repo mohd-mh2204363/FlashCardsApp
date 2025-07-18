@@ -6,7 +6,7 @@ export const useApi = () => {
     const makeRequest = async (url, options = {}) => {
         const token = await getToken();
 
-        const response = await fetch(`http://127.0.0.1:8000/${url}`, {   // back-ticks!
+        const response = await fetch(`http://127.0.0.1:8000/${url}`, {
             ...options,
             headers: {
                 ...(options.headers || {}),

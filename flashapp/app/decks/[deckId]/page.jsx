@@ -12,11 +12,11 @@ import {
 } from '@/components/ui/card';
 
 export default function HistoryPage() {
-    const params = useParams();                  // { deckId: '123' }
+    const params = useParams();
     const deckId = params?.deckId;
     const { makeRequest } = useApi();
 
-    const [cards, setCards] = useState([]);            // [{ id, question, answer }, …]
+    const [cards, setCards] = useState([]);
     const [index, setIndex] = useState(0);
     const [showBack, setShowBack] = useState(false);
 
@@ -30,7 +30,7 @@ export default function HistoryPage() {
                 console.error(err);
             }
         })();
-    }, [deckId, makeRequest]);
+    }, [deckId]);
 
     if (cards.length === 0) {
         return <p className="text-center text-gray-400">Loading…</p>;

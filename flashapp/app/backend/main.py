@@ -13,7 +13,7 @@ import logging
 import os
 import unicodedata
 import re
-from app.backend.ai_generator import get_cards
+from ai_generator import get_cards
 from functools import lru_cache
 from typing import Dict
 
@@ -131,6 +131,9 @@ def read_my_decks(
     )
     return decks
 
+#command to run the server
+# uvicorn main:app --reload
+
 @app.get("/decks/{deck_id}", response_model=DeckSchema)
 def read_deck(deck_id: int, db: Session = Depends(get_db)):
     deck = db.query(Deck).filter(Deck.id == deck_id).first()
@@ -146,9 +149,38 @@ def read_card(card_id: int, db: Session = Depends(get_db)):
     return card
 
 @app.post("/decks", response_model=DeckSchema)
-def create_deck(deck: DeckSchema, db: Session = Depends(get_db)):
-    db_deck = Deck(**deck.model_dump())
+def create_deck(deck: DeckSchema, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    db_deck = Deck(**deck.model_dump(), user_id=user.id)
     db.add(db_deck)
+    db.commit()
+    db.refresh(db_deck)
+    return db_deck
+
+@app.put("/decks/{deck_id}", response_model=DeckSchema)
+def update_deck(deck_id: int, deck: DeckSchema, db: Session = Depends(get_db)):
+    db_deck = db.query(Deck).filter(Deck.id == deck_id).first()
+    if not db_deck:
+        raise HTTPException(404, f"Deck {deck_id} not found")
+    
+    # Update basic deck fields (name, description)
+    for key, value in deck.model_dump().items():
+        if key not in ["cards", "id"]:  # Skip cards and id fields
+            setattr(db_deck, key, value)
+    
+    # Handle cards update if cards are provided
+    if deck.cards:
+        # Remove existing cards
+        db.query(Card).filter(Card.deck_id == deck_id).delete()
+        
+        # Add new cards
+        for card_data in deck.cards:
+            new_card = Card(
+                question=card_data.question,
+                answer=card_data.answer,
+                deck_id=deck_id
+            )
+            db.add(new_card)
+    
     db.commit()
     db.refresh(db_deck)
     return db_deck
